@@ -56,13 +56,14 @@ def draw_attriubutes(attributes, k):
 #wybór najlepszego podziału za pomocą indeksu zysku informacyjnego   
 def get_best_split(dataset, attributes):
     max_information_gain = 0
-    best_split = dataset
+    best_split = dict()
+    best_split["terminal"] = dataset
     describition = "terminal"
     parent_entropy = entropy_classifier(dataset)
     for attribute in attributes:
         element = conditional_entropy(dataset, attribute)
         information_gain = parent_entropy - element['entropy']
-        if(information_gain >= max_information_gain):
+        if(information_gain > max_information_gain):
             max_information_gain = information_gain
             best_split = element['split']
             describition = element['description']
@@ -98,15 +99,17 @@ def conditional_entropy_numerical(dataset,attribute, values):
     N = len(dataset)
     best_entropy = 1000
     split = dict()
+    split["terminal"]= dataset
     for value in values:
         left, right = list(), list()
-        left = list(filter(lambda element: element['attributes'][attribute] < value,dataset))
-        right = list(filter(lambda element: element['attributes'][attribute] >= value,dataset))
+        left = list(filter(lambda element: element['attributes'][attribute] <= value,dataset))
+        right = list(filter(lambda element: element['attributes'][attribute] > value,dataset))
         entropy = len(left)/N*entropy_classifier(left)+len(right)/N*entropy_classifier(right)
         if( entropy < best_entropy):
             best_entropy = entropy
             split['left'] = left
             split['right'] = right
+            split.pop("terminal",None)
             b_value = value
     return {'split': split, 'entropy': best_entropy, 'description': {'attribute': attribute , 'value': b_value}}
 
@@ -123,55 +126,38 @@ def entropy_classifier(dataset):
         p_bad = 1-p_good
         entropy = (-p_good*np.log2(p_good))+(-p_bad*np.log2(p_bad))
     return entropy
-def all_keys_into_one(keys, node):
-    dataset = list()
-    for key in keys:
-        dataset+=node[key]
-    return dataset
+
 
 def set_terminal(last_node):
-    print('last',last_node)
-    good=len(list(filter(lambda element: element['actual_classification'] ==1, last_node )))
-    bad =len(list(filter(lambda element: element['actual_classification'] ==2, last_node )))
+    good=len(list(filter(lambda element: element['actual_classification'] == 1, last_node )))
+    bad =len(list(filter(lambda element: element['actual_classification'] == 2, last_node )))
     if good > bad:
         return 1
     else:
         return 2
-
-def split(node, min_size, max_depth, n_attributes, depth):
-    #sprawdzenie czy podział ma sens- czy są klucze podziału
-    if  node.keys() == None:
-        print('terminal')
-        node = set_terminal(node)
-        return
-    print('depth', depth)
-    node= dict(node)
+def split(node, max_depth, min_size, n_attributes, depth):
     print(node)
-    keys = node.keys()
-    #sprawdzenie, czy drzewo nie jest zbyt głębokie, jeśli jest- wszystkie klucze zwijane są w jeden na podstawie którego podejmowana jest decyzja
+    #sprawdzenie czy dalszy podział ma sens
+    keys = list(node.keys())
+    if(len(keys) == 1):
+        node["description"] = set_terminal(node["terminal"])
+        return
+    #jeśli jest zbyt głębokie drzewo- koniec
     if(depth == max_depth):
-        print('max depth')
-        dataset = all_keys_into_one(keys,node)
         for key in keys:
-            node[key] = set_terminal(dataset)
-        return 
-    #jeśli nie
-    else:
-        for key in keys:
-            #sprawdzenie, czy klucz nie jest zbyt mały- jeśli tak, ustawianie mu wartosci koncowej
-            if len(node[key]) <= min_size :
-                print('too small')
-                node[key] = set_terminal(node[key])
-                return 
-               
-            else:
-                #losowanie nowego zostawu atrybutów branych pod uwagę przy podziale 
-                attributes = draw_attriubutes(len(node[key][0]['attributes']),n_attributes)
-                #najlepszy podział
-                node[key] = get_best_split(node[key],attributes)
-                print('node-key',node)
-                split(node[key]['split'], min_size, max_depth, n_attributes, depth+1)
-
+            new_key = dict()
+            terminal = dict()
+            terminal["terminal"] = node[key]
+            new_key["split"] = terminal
+            new_key["description"] = set_terminal(new_key["split"]["terminal"])
+            node[key]=new_key
+        return
+    #print(temp)
+    #attributes = draw_attriubutes(len(temp[0]['attributes']),n_attributes)
+    #node[keys[0]] = get_best_split(temp, attributes)
+    #print('new split',node[keys[0]])
+    #sprawdzenie czy nie jest zbyt glebokie
+    
 def build_tree(train, max_depth, min_size, n_attributes):
     attributes = draw_attriubutes(len(train[0]['attributes']),n_attributes)
     root = get_best_split(train, attributes)
@@ -180,5 +166,7 @@ def build_tree(train, max_depth, min_size, n_attributes):
 
 print('Hello UM')
 data = read_file('german.data')
-chosen_data = create_bootstrap_group(data,8)
-print(build_tree(chosen_data,5,1,1))
+chosen_data = create_bootstrap_group(data,4)
+attributes = draw_attriubutes(len(chosen_data[0]['attributes']),4)
+#print(get_best_split(chosen_data,attributes ))
+print(build_tree(chosen_data, 5,1,2))
