@@ -181,4 +181,4 @@ def build_tree(train, max_depth, min_size, n_attributes):
 print('Hello UM')
 data = read_file('german.data')
 chosen_data = create_bootstrap_group(data,8)
-print(build_tree(chosen_data,5,1,1))
+print(build_tree(chosen_data,5,2,1))
