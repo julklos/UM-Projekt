@@ -35,12 +35,10 @@ def create_bootstrap_group(dataset, bg_size):
     indexes_to_sample = []
 
     for element in dataset:
-
-        for _ in range(element['probability']):
-
+        prob = element['probability']
+        for _ in range(prob):
             indexes_to_sample.append(dataset.index(element))
-
-    chosen_indexes = random.sample(set(indexes_to_sample), bg_size)
+    chosen_indexes = random.sample((indexes_to_sample), bg_size)
     chosen_data = []
 
     for i in chosen_indexes:
@@ -137,7 +135,6 @@ def set_terminal(last_node):
         return 2
 #podział 
 def split(node, max_depth, min_size, n_attributes, depth):
-    print('node', node)
     #sprawdzenie czy dalszy podział ma sens
     keys = list(node.keys())
     if(len(keys) == 1):
@@ -145,9 +142,7 @@ def split(node, max_depth, min_size, n_attributes, depth):
         node["description"] = set_terminal(node["terminal"])
         return
     #jeśli jest zbyt głębokie drzewo- koniec
-    print(depth)
     if(depth == max_depth):
-        print('max depth')
         for key in keys:
             new_key = dict()
             terminal = dict()
@@ -157,7 +152,6 @@ def split(node, max_depth, min_size, n_attributes, depth):
             node[key]=new_key
         return
     else:
-        print('go on')
         for key in keys:
             attributes = draw_attriubutes(len(node[key][0]['attributes']),n_attributes)
             node[key]= get_best_split(node[key],attributes)
@@ -184,29 +178,38 @@ def build_forrest(data , max_depth, min_size, n_attributes, n_trees, n_tests, n_
 
 
 
-#def predict():
-#def predict_by_vote(forrest, test):
+def predict(tree, test):
+    #czy nie jest to ostatni element - pobierz przewidywaną klasyfikację
+
+    #czy descripton.value jest length == 1
+     # jest tak to porównaj czy wartosc testu jet wieksza czy mniejsza i jedzim dalej
+    # jesli nie jest wywołaj podział od wartosc atrybutu, ktora ma test..
+    
+def predict_by_vote(forrest, test):
+    result = []
+    for tree in forrest:
+        result.append(predict(tree, test))
+    good=len(list(filter(lambda element: element == 1, result )))
+    bad =len(list(filter(lambda element: element == 2, result )))
+    if good > bad
+        return 1
+    else:
+        return 2
 #losowanie grupy testowej- n elementów z całego zestawu danych- brak potrzeby powtórzeń
 def create_test_group(data, n_tests):
     return random.sample(data, n_tests)
 def verify(data, prediction, test):
     if( prediction == test[0]["actual_classification"]):
-        print('its OK')
         verification = 1
     else:
-        print('its not OK')
         verification = 0
         data.remove(test[0])
-        test[0]["probability"] = test[0]["probability"]+1
-        data.append(test)
+        test[0]["probability"] = int(test[0]["probability"]+1)
+        data.append(test[-1])
     return data, verification
 print('Hello UM')
 data = read_file('german.data')
-chosen_data = create_bootstrap_group(data,3)
-#attributes = draw_attriubutes(len(chosen_data[0]['attributes']),4)
-#print(get_best_split(chosen_data,attributes ))
-#print(build_tree(chosen_data, 5,3,2))
-chosen_element = create_bootstrap_group(chosen_data,1)
-print('group', chosen_data)
-print('element', chosen_element)
-print('new group', verify(chosen_data,1,chosen_element))
+chosen_data = create_bootstrap_group(data,8)
+attributes = draw_attriubutes(len(chosen_data[0]['attributes']),4)
+print(get_best_split(chosen_data,attributes ))
+print(build_tree(chosen_data, 5,3,2))
