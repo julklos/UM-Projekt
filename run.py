@@ -85,12 +85,15 @@ def conditional_entropy_categorical(dataset, attribute,values):
     N = len(dataset)
     entropy = 0
     split = dict()
+    #klasyfikowanie gdyby okazało się, że dane testowe zawierają inną wartość atrybutu niż te z dataset
+    classify = set_terminal(dataset)
     for value in values:
         filtered = list(filter(lambda element: element['attributes'][attribute] == value,dataset))
         filtered_len = len(filtered)
         entropy += filtered_len/N*entropy_classifier(filtered)
         split[value] = filtered
-    return {'split': split, 'entropy': entropy, 'description': {'attribute': attribute , 'value': values}}
+    
+    return {'split': split, 'entropy': entropy, 'description': {'attribute': attribute , 'value': values, 'actual_node_classification': classify}}
 
 #entropia warunkowa dla danych numerycznych
 def conditional_entropy_numerical(dataset,attribute, values):
@@ -138,7 +141,6 @@ def split(node, max_depth, min_size, n_attributes, depth):
     #sprawdzenie czy dalszy podział ma sens
     keys = list(node.keys())
     if(len(keys) == 1):
-        print('keys = 1')
         node["description"] = set_terminal(node["terminal"])
         return
     #jeśli jest zbyt głębokie drzewo- koniec
@@ -173,13 +175,39 @@ def build_forrest(data , max_depth, min_size, n_attributes, n_trees, n_tests, n_
         forrest.append(i_tree)
         i_test = create_test_group(data, n_tests)
         for j in range(i_test):
-            #prediction = predict_by_vote(forrest, i_test[j])
+            prediction = predict_by_vote(forrest, i_test[j])
             [data, verification] = verify(data, prediction, i_test)
+            score +=verification
+    accuracy = score/n_trees
+    return accuracy
 
 
 
 def predict(tree, test):
     #czy nie jest to ostatni element - pobierz przewidywaną klasyfikację
+    if 'terminal' in tree['split']:
+        prediction = tree['split']['description']
+        return prediction
+        #czy descripton.value jest length == 1
+     # jest tak to porównaj czy wartosc testu jet wieksza czy mniejsza i jedzim dalej
+    else:
+        attribute = tree['description']['attribute']
+        if type(tree['description']['value']) is set :
+            #  jesli nie jest wywołaj podział od wartosc atrybutu, ktora ma test..
+            test_value = test[-1]['attributes'][attribute]
+            #sprawdz czy dana testowa ma wartosc atrybutu ktora byla brana pod uwage przy podziale drzewa
+            if test_value in tree['description']['value']:
+                return predict(tree['split'][test_value],test)
+            else:
+                prediction = tree['description']['actual_node_classification']
+                return prediction
+        else:
+            value = tree['description']['value']
+            if(test[-1]['attributes'][attribute]> value):
+                return predict(tree['split']['right'], test)
+                
+            else:
+                return predict(tree['split']['left'], test)
 
     #czy descripton.value jest length == 1
      # jest tak to porównaj czy wartosc testu jet wieksza czy mniejsza i jedzim dalej
@@ -191,7 +219,7 @@ def predict_by_vote(forrest, test):
         result.append(predict(tree, test))
     good=len(list(filter(lambda element: element == 1, result )))
     bad =len(list(filter(lambda element: element == 2, result )))
-    if good > bad
+    if good > bad :
         return 1
     else:
         return 2
@@ -209,7 +237,10 @@ def verify(data, prediction, test):
     return data, verification
 print('Hello UM')
 data = read_file('german.data')
-chosen_data = create_bootstrap_group(data,8)
-attributes = draw_attriubutes(len(chosen_data[0]['attributes']),4)
-print(get_best_split(chosen_data,attributes ))
-print(build_tree(chosen_data, 5,3,2))
+chosen_data = create_bootstrap_group(data,2)
+tree = build_tree(chosen_data, 5,3,2)
+test = create_test_group(data,1)
+print(tree)
+print(test)
+print(predict(tree,test))
+print(predict_by_vote([tree], test))
