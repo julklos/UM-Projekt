@@ -10,6 +10,8 @@ pylint = "*"
 [packages]
 numpy = "*"
 scipy = "*"
+pyplot = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3.6"
